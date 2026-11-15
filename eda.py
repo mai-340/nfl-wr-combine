@@ -25,12 +25,14 @@ def filter_combine(combine: pd.DataFrame) -> pd.DataFrame:
     """
     is_wr = combine['pos'] == 'WR'
 
-    within_years = (combine['draft_year'] >= 2010) & (combine['draft_year'] <= 2025)
+    within_years = (combine['draft_year'] >= 2010) & (
+        combine['draft_year'] <= 2025)
     has_id = combine['pfr_id'].notnull()
     wr = combine[is_wr & within_years & has_id]
     columns = ['player_name', 'pfr_id', 'draft_year', 'draft_round',
-                'draft_ovr', 'ht', 'wt', 'forty', 'bench', 'vertical', 'broad_jump',
-                'cone', 'shuttle']
+               'draft_ovr', 'ht', 'wt', 'forty', 'bench', 'vertical',
+               'broad_jump',
+               'cone', 'shuttle']
     return wr[columns]
 
 
@@ -40,20 +42,20 @@ def add_gsis_id(wr: pd.DataFrame, draft: pd.DataFrame) -> pd.DataFrame:
     to attach each player's gsis_id. links to player stats
     data
     """
-    
+
     ids = draft[['pfr_player_id', 'gsis_id']]
     ids = ids[ids['gsis_id'].notnull()]
-    return wr.merge(ids, left_on='pfr_id', right_on='pfr_player_id', 
+    return wr.merge(ids, left_on='pfr_id', right_on='pfr_player_id',
                     how='left')
 
 
 def add_rookie_stats(wr: pd.DataFrame, stats: pd.DataFrame) -> pd.DataFrame:
     """
-    Merges the WR's with their regular season stats and keeps only each 
+    Merges the WR's with their regular season stats and keeps only each
     player's rookie season.
     """
     wr = wr.dropna(subset=['gsis_id'])
-    
+
     small = stats[['player_id', 'season', 'fantasy_points_ppr']]
     small = small.dropna(subset=['player_id'])
     merged = wr.merge(
@@ -62,9 +64,63 @@ def add_rookie_stats(wr: pd.DataFrame, stats: pd.DataFrame) -> pd.DataFrame:
         right_on='player_id',
         how='left'
     )
-    
+
     is_rookie = merged['season'] == merged['draft_year']
     return merged[is_rookie].copy()
+
+
+def create_plots(wr: pd.DataFrame) -> None:
+    """
+    Creates and saves plots for the relationships between
+    draft overall, 40 yard dash, vertical jump, and rookie
+    fantasy points (PPR)
+    """
+    sns.relplot(data=wr, x='draft_ovr', y='fantasy_points_ppr')
+    plt.title('Draft Overall vs. Rookie Fantasy Points (PPR)')
+    plt.xlabel('Draft Overall')
+    plt.ylabel('Rookie Fantasy Points (PPR)')
+    plt.savefig('plots/draft_ovr_vs_fantasy_points.png')
+
+    sns.relplot(data=wr, x='forty', y='fantasy_points_ppr')
+    plt.title('40 Yard Dash vs. Rookie Fantasy Points (PPR)')
+    plt.xlabel('40 Yard Dash (seconds)')
+    plt.ylabel('Rookie Fantasy Points (PPR)')
+    plt.savefig('plots/forty_vs_fantasy_points.png')
+
+    sns.relplot(data=wr, x='forty', y='draft_ovr')
+    plt.title('40 Yard Dash vs. Draft Overall')
+    plt.xlabel('40 Yard Dash (seconds)')
+    plt.ylabel('Draft Overall')
+    plt.savefig('plots/forty_vs_draft_ovr.png')
+
+    sns.relplot(data=wr, x='vertical', y='fantasy_points_ppr')
+    plt.title('Vertical Jump vs. Rookie Fantasy Points (PPR)')
+    plt.xlabel('Vertical Jump (inches)')
+    plt.ylabel('Rookie Fantasy Points (PPR)')
+    plt.savefig('plots/vertical_vs_fantasy_points.png')
+
+
+def seven_number_summary(wr: pd.DataFrame) -> None:
+    """
+    Prints the seven-number summary for the following columns:
+    draft_ovr, forty, bench, vertical, broad_jump, cone, shuttle,
+    and fantasy_points_ppr
+    """
+    columns = ['draft_ovr', 'forty', 'bench', 'vertical',
+               'broad_jump', 'cone', 'shuttle', 'fantasy_points_ppr']
+    print(wr[columns].describe())
+
+
+def categorical_summary(wr: pd.DataFrame) -> None:
+    """
+    Prints the counts of each category for the following columns:
+    draft_round, draft_year
+    """
+    print('Draft Round Counts:')
+    print(wr['draft_round'].value_counts().sort_index())
+    print()
+    print('Draft Year Counts:')
+    print(wr['draft_year'].value_counts().sort_index())
 
 
 def main():
@@ -102,53 +158,18 @@ def main():
     print('Unique players:', wr['pfr_id'].nunique())
 
     print('Duplicate player rows:',
-      wr.duplicated(['pfr_id', 'draft_year']).sum())
-  
+          wr.duplicated(['pfr_id', 'draft_year']).sum())
+
     print('Missing values by column:')
     print(wr.isna().sum())
-
-    print()
-    print('Players by draft year:')
-    print(wr['draft_year'].value_counts().sort_index())
 
     print()
     print('Duplicate player seasons in stats:')
     print(stats.duplicated(['player_id', 'season']).sum())
 
-    #Seven-number Summaries
-    #For draft_ovr, forty, bench, vertical,
-    # broad_jump, cone, shuttle, and fantasy_points_ppr
-    print(wr[['draft_ovr', 'forty', 'bench', 'vertical',
-              'broad_jump', 'cone', 'shuttle',
-              'fantasy_points_ppr']].describe())
-    
-    print('Players by draft round:')
-    print(wr['draft_round'].value_counts().sort_index())
-
-    sns.relplot(data=wr, x='draft_ovr', y='fantasy_points_ppr')
-    plt.title('Draft Overall vs. Rookie Fantasy Points (PPR)')
-    plt.xlabel('Draft Overall')
-    plt.ylabel('Rookie Fantasy Points (PPR)')
-    plt.savefig('plots/draft_ovr_vs_fantasy_points.png')
-
-    sns.relplot(data=wr, x='forty', y='fantasy_points_ppr')
-    plt.title('40 Yard Dash vs. Rookie Fantasy Points (PPR)')
-    plt.xlabel('40 Yard Dash (seconds)')
-    plt.ylabel('Rookie Fantasy Points (PPR)')
-    plt.savefig('plots/forty_vs_fantasy_points.png')
-
-    sns.relplot(data=wr, x='forty', y='draft_ovr')
-    plt.title('40 Yard Dash vs. Draft Overall')
-    plt.xlabel('40 Yard Dash (seconds)')
-    plt.ylabel('Draft Overall')
-    plt.savefig('plots/forty_vs_draft_ovr.png')
-
-    sns.relplot(data=wr, x='vertical', y='fantasy_points_ppr')
-    plt.title('Vertical Jump vs. Rookie Fantasy Points (PPR)')
-    plt.xlabel('Vertical Jump (inches)')
-    plt.ylabel('Rookie Fantasy Points (PPR)')
-    plt.savefig('plots/vertical_vs_fantasy_points.png')
-
+    seven_number_summary(wr)
+    categorical_summary(wr)
+    create_plots(wr)
 
 
 if __name__ == '__main__':
