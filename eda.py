@@ -132,23 +132,23 @@ def main():
     draft = pd.read_csv('data/draft_picks.csv')
     stats = load_stats(2010, 2025)
 
-    # print('combine shape:', combine.shape)
-    # print(list(combine.columns))
+    print('combine shape:', combine.shape)
+    print(list(combine.columns))
 
-    # print('draft shape:', draft.shape)
-    # print(list(draft.columns))
+    print('draft shape:', draft.shape)
+    print(list(draft.columns))
 
-    # print('stats shape:', stats.shape)
-    # print(list(stats.columns))
+    print('stats shape:', stats.shape)
+    print(list(stats.columns))
 
-    # print(stats['season_type'].unique())
+    print(stats['season_type'].unique())
 
     wr = filter_combine(combine)
     print('Drafted WRs: ', wr.shape)
 
     wr = add_gsis_id(wr, draft)
     print("After adding gsis_id: ", wr.shape)
-    print('Missing gsis_id:', wr['gsis_id'].isnull().sum())
+    print('Missing gsis_id:', wr['gsis_id'].isna().sum())
 
     wr = add_rookie_stats(wr, stats)
     print("With rookie stats: ", wr.shape)
